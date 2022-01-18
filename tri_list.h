@@ -119,9 +119,65 @@ public:
 
 private:
   // An iterator, necessary for the begin() and end() methods.
-  struct tri_iterator {
+  struct tri_iterator : public std::vector<var_t>::iterator {
+    using value_type = var_t;
 
+    tri_iterator(typename std::vector<var_t>::iterator it)
+      : std::vector<var_t>::iterator(it) {}
+
+    tri_iterator() : std::vector<var_t>::iterator() {}
+
+    var_t operator*() const
+    {
+      var_t& elt = std::vector<var_t>::iterator::operator*();
+      return std::visit([this] <typename T> (T e) {
+          return var_t(get_mod<T>(e));
+        }, elt);
+    }
+
+    var_t* operator->() const
+    {
+      return &operator*();
+    }
+
+    tri_iterator& operator++()
+    {
+      std::vector<var_t>::iterator::operator++();
+      return *this;
+    }
+
+    tri_iterator& operator--()
+    {
+      std::vector<var_t>::iterator::operator--();
+      return *this;
+    }
+
+    tri_iterator& operator++(int)
+    {
+      tri_iterator tmp(*this);
+      std::vector<var_t>::iterator::operator++();
+      return tmp;
+    }
+
+    tri_iterator& operator--(int)
+    {
+      tri_iterator tmp(*this);
+      std::vector<var_t>::iterator::operator--();
+      return tmp;
+    }
   };
+
+public:
+
+  tri_iterator begin()
+  {
+    return contents.begin();
+  }
+
+  tri_iterator end()
+  {
+    return contents.end();
+  }
 };
 
 #endif  // _TRI_LIST_H_
