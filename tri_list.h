@@ -19,8 +19,8 @@ concept my_type = std::same_as<T, T1> || std::same_as<T, T2>
                   || std::same_as<T, T3>;
 
 
-template <typename T, modifier<T> F>
-inline auto compose(F f2, F f1)
+template <typename T, modifier<T> F1, modifier<T> F2>
+inline auto compose(F2 f2, F1 f1)
 {
   return [f1, f2] (T e) { return f2(f1(e)); };
 }
@@ -41,7 +41,10 @@ class tri_list
   
   std::vector<var_t> contents;
 
-  std::tuple<mod_type<T1>, mod_type<T2>, mod_type<T3>> mods = {identity, identity, identity};
+  std::tuple<mod_type<T1>, mod_type<T2>, mod_type<T3>>
+  mods = {
+    identity<T1>(), identity<T2>(), identity<T3>()
+  };
 
   template <typename T>
   mod_type<T>& get_mod()
@@ -73,20 +76,23 @@ public:
       return std::visit(filter, v);
     };
 
+    auto mod = get_mod<T>();
+    
     return contents | std::views::filter(visit_filter)
-      | std::views::transform([] (const var_t & v) {
-      return std::get<T>(v);
+      | std::views::transform([mod] (const var_t & v) {
+        return mod(std::get<T>(v));
     });
   }
 
   template <typename T, modifier<T> F>
   void modify_only(F m = F{})
   {
-    auto mod = get_mod<T>();
-    mod = compose(m, mod);
+    auto& mod = get_mod<T>();
+    mod = compose<T>(m, mod);
   }
 
-  template <typename T> void reset()
+  template <typename T>
+  void reset()
   {
     get_mod<T>() = identity<T>();
   }
