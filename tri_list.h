@@ -18,9 +18,8 @@
 // wewn klasy tri_list robić
 // template <my_type<T1, T2, T3> T>?
 template <typename T, typename T1, typename T2, typename T3>
-concept my_type = std::same_as<T, T1> || std::same_as<T, T2>
-                  || std::same_as<T, T3>;
-
+concept my_type = std::same_as<T, T1> || std::same_as<T, T2> ||
+  std::same_as<T, T3>;
 
 // Compose two modifiers into a single one. Works just like standard function
 // composition in maths ie. if the result of compose(f2, f1) would be applied
@@ -28,9 +27,11 @@ concept my_type = std::same_as<T, T1> || std::same_as<T, T2>
 template <typename T, modifier<T> F1, modifier<T> F2>
 inline auto compose(F2 f2, F1 f1)
 {
-  return [f1, f2] (T e) { return f2(f1(e)); };
+  // TODO: to wolne jest still :(
+  // kopiuje rekurencyjnie captures zgłębionych lambd?
+  // jak tego uniknąć?
+  return std::bind(std::move(f2), std::bind(std::move(f1), std::placeholders::_1));
 }
-
 
 // Identity function for any type.
 template <typename T>
@@ -43,6 +44,8 @@ inline T identity(T e)
 // A a collection that may store elements of 3 types: T1, T2 and T3.
 template <typename T1, typename T2, typename T3>
 class tri_list {
+  static_assert(!(std::same_as<T1, T2> || std::same_as<T1, T3> ||
+                  std::same_as<T2, T3>));
   // An alias for the variants stored by the list.
   using var_t = std::variant<T1, T2, T3>;
 
@@ -69,7 +72,7 @@ class tri_list {
 
   // Same function but for const access.
   template <typename T>
-  mod_type<T> get_mod() const
+  const mod_type<T>& get_mod() const
   {
     return std::get<mod_type<T>>(mods);
   }
@@ -97,16 +100,14 @@ public:
       return std::same_as<E, T>;
     };
 
-    auto visit_filter = [filter] (const var_t & v) {
+    auto visit_filter = [&filter] (const var_t & v) {
       return std::visit(filter, v);
     };
 
-    auto mod = get_mod<T>();
-
     return contents
       | std::views::filter(visit_filter)
-      | std::views::transform([mod] (const var_t & v) {
-        return mod(std::get<T>(v));
+      | std::views::transform([this] (const var_t & v) {
+        return get_mod<T>()(std::get<T>(v));
       });
   }
 
@@ -145,7 +146,7 @@ private:
     {
       var_t& elt = std::vector<var_t>::iterator::operator*();
       return std::visit([this] <typename T> (T e) {
-          auto mod = tl->get_mod<T>();
+          const auto& mod = tl->get_mod<T>();
           return var_t(mod(e));
         }, elt);
     }
