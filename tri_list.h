@@ -47,6 +47,7 @@ class tri_list {
   using var_t = std::variant<T1, T2, T3>;
 
   // Alias for the basic modifier for a given type.
+  // TODO: czy const?
   template <typename T>
   using mod_type = std::function<T(T)>;
 
@@ -59,9 +60,16 @@ class tri_list {
   };
 
   // Accessing the type T's current modifier. It returns a reference so that
-  // the result can be further modified.
+  // the result can be further modified. That's also why it cannot be const.
   template <typename T>
   mod_type<T>& get_mod()
+  {
+    return std::get<mod_type<T>>(mods);
+  }
+
+  // Same function but for const access.
+  template <typename T>
+  mod_type<T> get_mod() const
   {
     return std::get<mod_type<T>>(mods);
   }
@@ -83,7 +91,7 @@ public:
 
   // Get a view of all of the elements of type T stored in the list.
   template <typename T>
-  auto range_over()
+  auto range_over() const
   {
     auto filter = [] <typename E> (E) {
       return std::same_as<E, T>;
