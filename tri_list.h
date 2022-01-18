@@ -120,19 +120,25 @@ public:
 private:
   // An iterator, necessary for the begin() and end() methods.
   struct tri_iterator : public std::vector<var_t>::iterator {
-    using difference_type = std::ptrdiff_t;
     using value_type = var_t;
 
-    tri_iterator(typename std::vector<var_t>::iterator it)
-      : std::vector<var_t>::iterator(it) {}
+    // UWAGA: chciałem tutaj referencję, ale wtedy miałem błąd, że
+    // ill formed assignemnt operator... Zostawić pointer (dość ułatwia?)
+    // czy jednak trzymać się referencji i nadpisywać coś?
+    // potrzebuję obiektu "rodzica" by znać modifier...
+    tri_list* tl;
 
-    tri_iterator() : std::vector<var_t>::iterator() {}
+    tri_iterator(typename std::vector<var_t>::iterator it, tri_list* tl)
+      : std::vector<var_t>::iterator(it), tl(tl) {}
+
+    tri_iterator() : std::vector<var_t>::iterator(), tl() {}
 
     var_t operator*() const
     {
       var_t& elt = std::vector<var_t>::iterator::operator*();
       return std::visit([this] <typename T> (T e) {
-          return var_t(get_mod<T>(e));
+          auto mod = tl->get_mod<T>();
+          return var_t(mod(e));
         }, elt);
     }
 
@@ -172,12 +178,12 @@ public:
 
   tri_iterator begin()
   {
-    return contents.begin();
+    return tri_iterator(contents.begin(), this);
   }
 
   tri_iterator end()
   {
-    return contents.end();
+    return tri_iterator(contents.end(), this);
   }
 };
 
