@@ -120,6 +120,7 @@ public:
 private:
   // An iterator, necessary for the begin() and end() methods.
   struct tri_iterator : public std::vector<var_t>::iterator {
+    using difference_type = std::ptrdiff_t;
     using value_type = var_t;
 
     tri_iterator(typename std::vector<var_t>::iterator it)
@@ -152,14 +153,14 @@ private:
       return *this;
     }
 
-    tri_iterator& operator++(int)
+    tri_iterator operator++(int)
     {
       tri_iterator tmp(*this);
       std::vector<var_t>::iterator::operator++();
       return tmp;
     }
 
-    tri_iterator& operator--(int)
+    tri_iterator operator--(int)
     {
       tri_iterator tmp(*this);
       std::vector<var_t>::iterator::operator--();
