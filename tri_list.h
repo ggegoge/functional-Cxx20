@@ -34,10 +34,11 @@ inline auto compose(F2 f2, F1 f1)
 
 // Identity function for any type.
 template <typename T>
-inline std::function<T(T)> identity()
+inline T identity(T e)
 {
-  return [] (T e) { return e; };
+  return e;
 }
+
 
 // A a collection that may store elements of 3 types: T1, T2 and T3.
 template <typename T1, typename T2, typename T3>
@@ -53,9 +54,8 @@ class tri_list {
   std::vector<var_t> contents;
 
   // Modifier for each type is stored in this tuple.
-  std::tuple<mod_type<T1>, mod_type<T2>, mod_type<T3>>
-  mods = {
-    identity<T1>(), identity<T2>(), identity<T3>()
+  std::tuple<mod_type<T1>, mod_type<T2>, mod_type<T3>> mods = {
+    identity<T1>, identity<T2>, identity<T3>
   };
 
   // Accessing the type T's current modifier. It returns a reference so that
@@ -114,7 +114,7 @@ public:
   template <typename T>
   void reset()
   {
-    get_mod<T>() = identity<T>();
+    get_mod<T>() = identity<T>;
   }
 
 private:
