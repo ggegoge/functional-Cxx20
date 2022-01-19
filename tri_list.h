@@ -7,6 +7,7 @@
 #include <ranges>
 #include <tuple>
 #include <type_traits>
+#include <utility>
 #include <vector>
 #include <variant>
 #include <concepts>
@@ -25,11 +26,8 @@ concept my_type = std::same_as<T, T1> || std::same_as<T, T2> ||
 // composition in maths ie. if the result of compose(f2, f1) would be applied
 // on some x then it would evaluate to f2(f1(x)).
 template <typename T, modifier<T> F1, modifier<T> F2>
-inline auto compose(F2 f2, F1 f1)
+inline auto compose(F2&& f2, F1&& f1)
 {
-  // TODO: to wolne jest still :(
-  // kopiuje rekurencyjnie captures zgłębionych lambd?
-  // jak tego uniknąć?
   return std::bind(std::move(f2), std::bind(std::move(f1), std::placeholders::_1));
 }
 
