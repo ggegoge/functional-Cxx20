@@ -24,9 +24,25 @@ template <typename T, typename T1, typename T2, typename T3>
 concept my_type = std::same_as<T, T1> || std::same_as<T, T2> ||
                   std::same_as<T, T3>;
 
+// TODO: próba skompilowania któregokolwiek z szablonów metod z argumentem
+// niebędącym jednym z (lub będącym więcej niż jednym z) T1, T2, T3 powinna
+// zakończyć się błędem.
+
+// We are required to call tri_list methods only when the type parameter is one
+// of the T{1,2,3} but not 0 nor more than 1. This concept makes sure of that.
+template <typename T, typename T1, typename T2, typename T3>
+concept one_type =
+  (std::same_as<T, T1> && !std::same_as<T, T2> && !std::same_as<T, T3>) ||
+  (std::same_as<T, T3> && !std::same_as<T, T2> && !std::same_as<T, T1>) ||
+  (std::same_as<T, T2> && !std::same_as<T, T1> && !std::same_as<T, T3>);
+
+// ^ TODO: jeśli tak istotnie trzeba, to mogę zamiast requiresa w funkcjach
+// zamienić <typename T> na <one_type<T1, T2, T3> T> co może będzie lepiej
+// wyglądać?
+
 // Compose two modifiers into a single one. Works just like standard function
-// composition in maths ie. if the result of compose(f2, f1) would be applied
-// on some x then it would evaluate to f2(f1(x)).
+// composition in maths ie. if the result of compose(f2, f1) would be applied on
+// some x then it would evaluate to f2(f1(x)).
 template <typename T, modifier<T> F1, modifier<T> F2>
 inline auto compose(F2&& f2, F1&& f1)
 {
@@ -46,9 +62,6 @@ inline T identity(T e)
 // A a collection that may store elements of 3 types: T1, T2 and T3.
 template <typename T1, typename T2, typename T3>
 class tri_list {
-  static_assert(!(std::same_as<T1, T2> || std::same_as<T1, T3> ||
-                  std::same_as<T2, T3>));
-
   // An alias for the variants stored by the list.
   using var_t = std::variant<T1, T2, T3>;
 
@@ -92,14 +105,14 @@ public:
   // Add a new element of type T to the list.
   // TODO: moglbym usunac var_t i miec implicite konwersje
   template <typename T>
-  void push_back(const T& t)
+  void push_back(const T& t) requires one_type<T, T1, T2, T3>
   {
     contents.push_back(var_t(t));
   }
 
   // Get a view of all of the elements of type T stored in the list.
   template <typename T>
-  auto range_over() const
+  auto range_over() const requires one_type<T, T1, T2, T3>
   {
     auto type_filter = [] <typename E> (E) {
       return std::same_as<E, T>;
@@ -119,7 +132,7 @@ public:
   // Modify all elements of type T with a modifier m. It updates the appropriate
   // modifier from the mods tuple by composing its previous value with m.
   template <typename T, modifier<T> F>
-  void modify_only(F m = F{})
+  void modify_only(F m = F{}) requires one_type<T, T1, T2, T3>
   {
     auto& mod = get_mod<T>();
     mod = compose<T>(m, mod);
@@ -128,7 +141,7 @@ public:
   // Undo all modifications that were done on elements of type T. Do it by
   // overwriting the modifier for type T with identity<T>.
   template <typename T>
-  void reset()
+  void reset() requires one_type<T, T1, T2, T3>
   {
     get_mod<T>() = identity<T>;
   }
