@@ -148,20 +148,21 @@ public:
 private:
   // An iterator, necessary for the begin() and end() methods. Based on the
   // contents vector's iterator but applies modifiers when dereferenced.
-  struct tri_iterator : public std::vector<var_t>::iterator {
-    using value_type = var_t;
-
+  class tri_iterator : public std::vector<var_t>::iterator {
     // TODO UWAGA: chciałem tutaj referencję, ale wtedy miałem błąd, że ill
     // formed assignemnt operator... Zostawić pointer (dość ułatwia?)  czy
     // jednak trzymać się referencji i nadpisywać coś?  potrzebuję obiektu
     // "rodzica" by znać modifier...
     const tri_list* tl;
 
+  public:
+    using value_type = var_t;
+
     tri_iterator(typename std::vector<var_t>::iterator it, const tri_list* tl)
       : std::vector<var_t>::iterator(it), tl(tl) {}
 
     // Must be default-initialisable.
-    tri_iterator() : std::vector<var_t>::iterator(), tl() {}
+    tri_iterator() : std::vector<var_t>::iterator(), tl(nullptr) {}
 
     // As in the base class iterator but apply a modifier upon visit.
     var_t operator*() const
