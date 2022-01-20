@@ -53,11 +53,10 @@ inline auto compose(F2&& f2, F1&& f1)
 
 // Identity function for any type.
 template <typename T>
-inline T identity(T e)
+inline T identity(const T& t)
 {
-  return e;
+  return t;
 }
-
 
 // A a collection that may store elements of 3 types: T1, T2 and T3.
 template <typename T1, typename T2, typename T3>
@@ -114,17 +113,17 @@ public:
   template <typename T>
   auto range_over() const requires one_type<T, T1, T2, T3>
   {
-    auto type_filter = [] <typename E> (E) {
+    auto type_filter = [] <typename E> (const E&) {
       return std::same_as<E, T>;
     };
 
-    auto var_filter = [&type_filter] (const var_t & v) {
+    auto var_filter = [&type_filter] (const var_t& v) {
       return std::visit(type_filter, v);
     };
 
     return contents
       | std::views::filter(var_filter)
-      | std::views::transform([this] (const var_t & v) {
+      | std::views::transform([this] (const var_t& v) {
         return get_mod<T>()(std::get<T>(v));
       });
   }
@@ -168,9 +167,9 @@ private:
     var_t operator*() const
     {
       var_t& elt = std::vector<var_t>::iterator::operator*();
-      return std::visit([this] <typename T> (T e) {
+      return std::visit([this] <typename T> (const T& t) {
         const auto& mod = tl->get_mod<T>();
-        return var_t(mod(e));
+        return var_t(mod(t));
       }, elt);
     }
 
