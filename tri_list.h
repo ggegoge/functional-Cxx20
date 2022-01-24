@@ -14,16 +14,6 @@
 
 #include "tri_list_concepts.h"
 
-// moze overkill? czy zamiast
-// template< typename T>
-// wewn klasy tri_list robić
-// template <my_type<T1, T2, T3> T>?
-// lub requires my_type<T, T1, T2, T3>
-// ale i tak sie mi nie skompiluje jak ktos da zly typ, wiec nie wiem
-template <typename T, typename T1, typename T2, typename T3>
-concept my_type = std::same_as<T, T1> || std::same_as<T, T2> ||
-                  std::same_as<T, T3>;
-
 // TODO: próba skompilowania któregokolwiek z szablonów metod z argumentem
 // niebędącym jednym z (lub będącym więcej niż jednym z) T1, T2, T3 powinna
 // zakończyć się błędem.
@@ -46,7 +36,6 @@ concept one_type =
 template <typename T, modifier<T> F1, modifier<T> F2>
 inline auto compose(F2&& f2, F1&& f1)
 {
-  // TODO: using's visibility
   using namespace std::placeholders;
   return std::bind(std::move(f2), std::bind(std::move(f1), _1));
 }
@@ -66,9 +55,8 @@ class tri_list {
 
   // Alias for the basic modifier type for elements of type T. Useful for
   // accessing the tuple in which I keep the three modifiers.
-  // TODO: czy const przed ktoryms T?
   template <typename T>
-  using mod_type = std::function<T(T)>;
+  using mod_type = std::function<T(const T&)>;
 
   // Contents will be stored in a vector of variants.
   std::vector<var_t> contents;
@@ -87,7 +75,7 @@ class tri_list {
     return std::get<mod_type<T>>(mods);
   }
 
-  // Same function but for const access (so that eg. range_over is const).
+  // Same function but for const access (so that eg. range_over can be const).
   template <typename T>
   const mod_type<T>& get_mod() const
   {
@@ -102,27 +90,18 @@ public:
   tri_list(std::initializer_list<var_t> init) : contents(init) {}
 
   // Add a new element of type T to the list.
-  // TODO: moglbym usunac var_t i miec implicite konwersje
   template <typename T>
   void push_back(const T& t) requires one_type<T, T1, T2, T3>
   {
-    contents.push_back(var_t(t));
+    contents.push_back(t);
   }
 
   // Get a view of all of the elements of type T stored in the list.
   template <typename T>
   auto range_over() const requires one_type<T, T1, T2, T3>
   {
-    auto type_filter = [] <typename E> (const E&) {
-      return std::same_as<E, T>;
-    };
-
-    auto var_filter = [&type_filter] (const var_t& v) {
-      return std::visit(type_filter, v);
-    };
-
     return contents
-      | std::views::filter(var_filter)
+      | std::views::filter(std::holds_alternative<T, T1, T2, T3>)
       | std::views::transform([this] (const var_t& v) {
         return get_mod<T>()(std::get<T>(v));
       });
@@ -149,10 +128,6 @@ private:
   // An iterator, necessary for the begin() and end() methods. Based on the
   // contents vector's iterator but applies modifiers when dereferenced.
   class tri_iterator : public std::vector<var_t>::iterator {
-    // TODO UWAGA: chciałem tutaj referencję, ale wtedy miałem błąd, że ill
-    // formed assignemnt operator... Zostawić pointer (dość ułatwia?)  czy
-    // jednak trzymać się referencji i nadpisywać coś?  potrzebuję obiektu
-    // "rodzica" by znać modifier...
     const tri_list* tl;
 
   public:
