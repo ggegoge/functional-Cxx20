@@ -126,7 +126,8 @@ public:
 
 private:
   // An iterator, necessary for the begin() and end() methods. Based on the
-  // contents vector's iterator but applies modifiers when dereferenced.
+  // contents vector's iterator but applies modifiers when dereferenced. Only
+  // methods necessary for the input_iterator concept have been implemented.
   class tri_iterator : public std::vector<var_t>::iterator {
     const tri_list* tl;
 
@@ -149,20 +150,9 @@ private:
       }, elt);
     }
 
-    var_t* operator->() const
-    {
-      return &operator*();
-    }
-
     tri_iterator& operator++()
     {
       std::vector<var_t>::iterator::operator++();
-      return *this;
-    }
-
-    tri_iterator& operator--()
-    {
-      std::vector<var_t>::iterator::operator--();
       return *this;
     }
 
@@ -170,13 +160,6 @@ private:
     {
       tri_iterator tmp(*this);
       std::vector<var_t>::iterator::operator++();
-      return tmp;
-    }
-
-    tri_iterator operator--(int)
-    {
-      tri_iterator tmp(*this);
-      std::vector<var_t>::iterator::operator--();
       return tmp;
     }
   };
