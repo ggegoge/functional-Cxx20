@@ -14,10 +14,6 @@
 
 #include "tri_list_concepts.h"
 
-// TODO: próba skompilowania któregokolwiek z szablonów metod z argumentem
-// niebędącym jednym z (lub będącym więcej niż jednym z) T1, T2, T3 powinna
-// zakończyć się błędem.
-
 // We are required to call tri_list methods only when the type parameter is one
 // of the T{1,2,3} but not 0 nor more than 1. This concept makes sure of that.
 template <typename T, typename T1, typename T2, typename T3>
@@ -25,10 +21,6 @@ concept one_type =
   (std::same_as<T, T1> && !std::same_as<T, T2> && !std::same_as<T, T3>) ||
   (std::same_as<T, T3> && !std::same_as<T, T2> && !std::same_as<T, T1>) ||
   (std::same_as<T, T2> && !std::same_as<T, T1> && !std::same_as<T, T3>);
-
-// ^ TODO: jeśli tak istotnie trzeba, to mogę zamiast requiresa w funkcjach
-// zamienić <typename T> na <one_type<T1, T2, T3> T> co może będzie lepiej
-// wyglądać?
 
 // Compose two modifiers into a single one. Works just like standard function
 // composition in maths ie. if the result of compose(f2, f1) would be applied on
@@ -84,10 +76,10 @@ class tri_list {
 
 public:
   // Constructor for an empty list.
-  tri_list() : contents() {}
+  tri_list() : contents{} {}
 
   // Make a tri_list out of initialiser list of elements of types T1, T2 and T3.
-  tri_list(std::initializer_list<var_t> init) : contents(init) {}
+  tri_list(std::initializer_list<var_t> init) : contents{init} {}
 
   // Add a new element of type T to the list.
   template <typename T>
@@ -102,7 +94,7 @@ public:
   {
     return contents
       | std::views::filter(std::holds_alternative<T, T1, T2, T3>)
-      | std::views::transform([this] (const var_t& v) {
+      | std::views::transform([this] (const var_t& v) -> T {
         return get_mod<T>()(std::get<T>(v));
       });
   }
@@ -135,18 +127,18 @@ private:
     using value_type = var_t;
 
     tri_iterator(typename std::vector<var_t>::iterator it, const tri_list* tl)
-      : std::vector<var_t>::iterator(it), tl(tl) {}
+      : std::vector<var_t>::iterator{it}, tl{tl} {}
 
     // Must be default-initialisable.
-    tri_iterator() : std::vector<var_t>::iterator(), tl(nullptr) {}
+    tri_iterator() : std::vector<var_t>::iterator{}, tl{nullptr} {}
 
     // As in the base class iterator but apply a modifier upon visit.
     var_t operator*() const
     {
       var_t& elt = std::vector<var_t>::iterator::operator*();
-      return std::visit([this] <typename T> (const T& t) {
+      return std::visit([this] <typename T> (const T& t) -> var_t {
         const auto& mod = tl->get_mod<T>();
-        return var_t(mod(t));
+        return mod(t);
       }, elt);
     }
 
@@ -158,7 +150,7 @@ private:
 
     tri_iterator operator++(int)
     {
-      tri_iterator tmp(*this);
+      tri_iterator tmp{*this};
       std::vector<var_t>::iterator::operator++();
       return tmp;
     }
@@ -168,12 +160,12 @@ public:
   // Get the iterators.
   tri_iterator begin()
   {
-    return tri_iterator(contents.begin(), this);
+    return tri_iterator{contents.begin(), this};
   }
 
   tri_iterator end()
   {
-    return tri_iterator(contents.end(), this);
+    return tri_iterator{contents.end(), this};
   }
 };
 
