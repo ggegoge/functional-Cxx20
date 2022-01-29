@@ -2,6 +2,7 @@
 #define _TRI_LIST_H_
 
 #include <functional>
+#include <numeric>
 #include <initializer_list>
 #include <ranges>
 #include <tuple>
@@ -44,30 +45,39 @@ class tri_list {
   // An alias for the variants stored by the list.
   using var_t = std::variant<T1, T2, T3>;
 
-  // Alias for the basic modifier type for elements of type T. Useful for
-  // accessing the tuple in which the three modifiers are kept.
+  // Alias for the lost of modifiers for elements of type T. Useful for
+  // accessing the tuple in which the three lists are kept.
   template <typename T>
-  using mod_type = std::function<T(const T&)>;
+  using modlist_t = std::vector<std::function<T(const T&)>>;
 
-  // Modifier for each type is kept here. Note the use of the previously defined
-  // mod_type<T> alias as it will be used with std::get on this tuple.
-  std::tuple<mod_type<T1>, mod_type<T2>, mod_type<T3>> mods = {
-    identity<T1>, identity<T2>, identity<T3>
-  };
+  // List of modifiers for each type is kept here. Note the use of the
+  // previously defined mod_type<T> alias as it will be used with std::get on
+  // this tuple.
+  std::tuple<modlist_t<T1>, modlist_t<T2>, modlist_t<T3>> mods = {{}, {}, {}};
 
-  // Accessing the type T's current modifier. It returns a reference so that
-  // the result can be further modified. That's also why it cannot be const.
+  // Accessing the type T's current list of modifier. It returns a reference so
+  // that it can be further modified. That's also why it cannot be const.
   template <typename T>
-  mod_type<T>& get_mod()
+  modlist_t<T>& get_mods()
   {
-    return std::get<mod_type<T>>(mods);
+    return std::get<modlist_t<T>>(mods);
   }
 
   // Same function but for const access (so that eg. range_over can be const).
   template <typename T>
-  const mod_type<T>& get_mod() const
+  const modlist_t<T>& get_mods() const
   {
-    return std::get<mod_type<T>>(mods);
+    return std::get<modlist_t<T>>(mods);
+  }
+
+  // Get a modifier for type T representing the composition of all modifiers
+  // applied on elements of this type.
+  template <typename T>
+  std::function<T(const T&)> compose_mods() const
+  {
+    return std::accumulate(get_mods<T>().cbegin(), get_mods<T>().cend(),
+      static_cast<std::function<T(const T&)>>(identity<T>),
+      [] (auto&& f1, auto&& f2) { return compose<T>(f2, f1); });
   }
 
   // Contents of the list will be stored in a vector of variants.
@@ -94,17 +104,17 @@ public:
     return contents
       | std::views::filter(std::holds_alternative<T, T1, T2, T3>)
       | std::views::transform([this] (const var_t& v) -> T {
-        return get_mod<T>()(std::get<T>(v));
+        return compose_mods<T>()(std::get<T>(v));
       });
   }
 
-  // Modify all elements of type T with a modifier m. It updates the appropriate
-  // modifier from the mods tuple by composing its previous value with m.
+  // Modify all elements of type T with a modifier m. It appends m to the T's
+  // modifier list. The modifiers will get actually composed upon visits.
   template <variantable<T1, T2, T3> T, modifier<T> F>
   void modify_only(F m = F{})
   {
-    auto& mod = get_mod<T>();
-    mod = compose<T>(m, mod);
+    auto& mods = get_mods<T>();
+    mods.push_back(std::move(m));
   }
 
   // Undo all modifications that were done on elements of type T. Do it by
@@ -112,7 +122,7 @@ public:
   template <variantable<T1, T2, T3> T>
   void reset()
   {
-    get_mod<T>() = identity<T>;
+    get_mods<T>() = {};
   }
 
 private:
@@ -140,7 +150,7 @@ private:
     {
       const var_t& elt = base_it_t::operator*();
       return std::visit([this] <typename T> (const T& t) -> var_t {
-        const auto& mod = tl->get_mod<T>();
+        const auto& mod = tl->compose_mods<T>();
         return mod(t);
       }, elt);
     }
