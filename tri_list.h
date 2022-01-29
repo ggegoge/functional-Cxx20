@@ -15,7 +15,7 @@
 
 // We are required to call tri_list methods only when the type parameter is one
 // of the T{1,2,3} but not 0 nor more than 1. This concept makes sure of that as
-// converting something into a variant with repeating types is ill-formed.
+// converting anything into a variant with repeating types is ill-formed.
 template <typename T, typename T1, typename T2, typename T3>
 concept variantable = requires (T x) {
   {std::variant<T1, T2, T3>{x}};
