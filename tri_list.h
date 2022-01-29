@@ -118,24 +118,29 @@ public:
 
 private:
   // An iterator, necessary for the begin() and end() methods. Based on the
-  // contents vector's iterator but applies modifiers when dereferenced. Only
-  // methods necessary for the input_iterator concept have been implemented.
-  class tri_iterator : public std::vector<var_t>::iterator {
+  // contents vector's const iterator but applies modifiers when
+  // dereferenced. Only methods necessary for the input_iterator concept have
+  // been implemented.
+  class tri_iterator : public std::vector<var_t>::const_iterator {
+    // Keeping the tri_list this iterator refers to in order to use the freshest
+    // versions of its modifiers.
     const tri_list* tl;
+
+    using base_it_t = typename std::vector<var_t>::const_iterator;
 
   public:
     using value_type = var_t;
 
-    tri_iterator(typename std::vector<var_t>::iterator it, const tri_list* tl)
-      : std::vector<var_t>::iterator{it}, tl{tl} {}
+    tri_iterator(base_it_t it, const tri_list* tl)
+      : base_it_t{it}, tl{tl} {}
 
     // Must be default-initialisable.
-    tri_iterator() : std::vector<var_t>::iterator{}, tl{nullptr} {}
+    tri_iterator() : base_it_t{}, tl{nullptr} {}
 
     // As in the base class iterator but apply a modifier upon visit.
     var_t operator*() const
     {
-      var_t& elt = std::vector<var_t>::iterator::operator*();
+      const var_t& elt = base_it_t::operator*();
       return std::visit([this] <typename T> (const T& t) -> var_t {
         const auto& mod = tl->get_mod<T>();
         return mod(t);
@@ -144,28 +149,28 @@ private:
 
     tri_iterator& operator++()
     {
-      std::vector<var_t>::iterator::operator++();
+      base_it_t::operator++();
       return *this;
     }
 
     tri_iterator operator++(int)
     {
       tri_iterator tmp{*this};
-      std::vector<var_t>::iterator::operator++();
+      base_it_t::operator++();
       return tmp;
     }
   };
 
 public:
   // Get the iterators.
-  tri_iterator begin()
+  tri_iterator begin() const
   {
-    return tri_iterator{contents.begin(), this};
+    return tri_iterator{contents.cbegin(), this};
   }
 
-  tri_iterator end()
+  tri_iterator end() const
   {
-    return tri_iterator{contents.end(), this};
+    return tri_iterator{contents.cend(), this};
   }
 };
 
