@@ -14,12 +14,12 @@
 #include "tri_list_concepts.h"
 
 // We are required to call tri_list methods only when the type parameter is one
-// of the T{1,2,3} but not 0 nor more than 1. This concept makes sure of that.
+// of the T{1,2,3} but not 0 nor more than 1. This concept makes sure of that as
+// converting something into a variant with repeating types is ill-formed.
 template <typename T, typename T1, typename T2, typename T3>
-concept one_of =
-  (std::same_as<T, T1> && !std::same_as<T, T2> && !std::same_as<T, T3>) ||
-  (std::same_as<T, T3> && !std::same_as<T, T2> && !std::same_as<T, T1>) ||
-  (std::same_as<T, T2> && !std::same_as<T, T1> && !std::same_as<T, T3>);
+concept variantable = requires (T x) {
+  {std::variant<T1, T2, T3>{x}};
+};
 
 // Compose two modifiers into a single one. Works just like standard function
 // composition in maths ie. if the result of compose(f2, f1) would be applied on
@@ -81,14 +81,14 @@ public:
   tri_list(std::initializer_list<var_t> init) : contents{init} {}
 
   // Add a new element of type T to the list.
-  template <one_of<T1, T2, T3> T>
+  template <variantable<T1, T2, T3> T>
   void push_back(const T& t)
   {
     contents.push_back(t);
   }
 
   // Get a view of all of the elements of type T stored in the list.
-  template <one_of<T1, T2, T3> T>
+  template <variantable<T1, T2, T3> T>
   auto range_over() const
   {
     return contents
@@ -100,7 +100,7 @@ public:
 
   // Modify all elements of type T with a modifier m. It updates the appropriate
   // modifier from the mods tuple by composing its previous value with m.
-  template <one_of<T1, T2, T3> T, modifier<T> F>
+  template <variantable<T1, T2, T3> T, modifier<T> F>
   void modify_only(F m = F{})
   {
     auto& mod = get_mod<T>();
@@ -109,7 +109,7 @@ public:
 
   // Undo all modifications that were done on elements of type T. Do it by
   // overwriting the modifier for type T with identity<T>.
-  template <one_of<T1, T2, T3> T>
+  template <variantable<T1, T2, T3> T>
   void reset()
   {
     get_mod<T>() = identity<T>;
