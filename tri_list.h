@@ -1,4 +1,3 @@
-
 #ifndef _TRI_LIST_H_
 #define _TRI_LIST_H_
 
@@ -17,7 +16,7 @@
 // We are required to call tri_list methods only when the type parameter is one
 // of the T{1,2,3} but not 0 nor more than 1. This concept makes sure of that.
 template <typename T, typename T1, typename T2, typename T3>
-concept one_type =
+concept one_of =
   (std::same_as<T, T1> && !std::same_as<T, T2> && !std::same_as<T, T3>) ||
   (std::same_as<T, T3> && !std::same_as<T, T2> && !std::same_as<T, T1>) ||
   (std::same_as<T, T2> && !std::same_as<T, T1> && !std::same_as<T, T3>);
@@ -83,14 +82,14 @@ public:
 
   // Add a new element of type T to the list.
   template <typename T>
-  void push_back(const T& t) requires one_type<T, T1, T2, T3>
+  void push_back(const T& t) requires one_of<T, T1, T2, T3>
   {
     contents.push_back(t);
   }
 
   // Get a view of all of the elements of type T stored in the list.
   template <typename T>
-  auto range_over() const requires one_type<T, T1, T2, T3>
+  auto range_over() const requires one_of<T, T1, T2, T3>
   {
     return contents
       | std::views::filter(std::holds_alternative<T, T1, T2, T3>)
@@ -102,7 +101,7 @@ public:
   // Modify all elements of type T with a modifier m. It updates the appropriate
   // modifier from the mods tuple by composing its previous value with m.
   template <typename T, modifier<T> F>
-  void modify_only(F m = F{}) requires one_type<T, T1, T2, T3>
+  void modify_only(F m = F{}) requires one_of<T, T1, T2, T3>
   {
     auto& mod = get_mod<T>();
     mod = compose<T>(m, mod);
@@ -111,7 +110,7 @@ public:
   // Undo all modifications that were done on elements of type T. Do it by
   // overwriting the modifier for type T with identity<T>.
   template <typename T>
-  void reset() requires one_type<T, T1, T2, T3>
+  void reset() requires one_of<T, T1, T2, T3>
   {
     get_mod<T>() = identity<T>;
   }
