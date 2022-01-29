@@ -49,9 +49,6 @@ class tri_list {
   template <typename T>
   using mod_type = std::function<T(const T&)>;
 
-  // Contents will be stored in a vector of variants.
-  std::vector<var_t> contents;
-
   // Modifier for each type is kept here. Note that I use the previously defined
   // mod_type<T> alias as I will continue to use it with std::get on this tuple.
   std::tuple<mod_type<T1>, mod_type<T2>, mod_type<T3>> mods = {
@@ -72,6 +69,9 @@ class tri_list {
   {
     return std::get<mod_type<T>>(mods);
   }
+
+  // Contents will be stored in a vector of variants.
+  std::vector<var_t> contents;
 
 public:
   // Constructor for an empty list.
