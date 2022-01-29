@@ -81,15 +81,15 @@ public:
   tri_list(std::initializer_list<var_t> init) : contents{init} {}
 
   // Add a new element of type T to the list.
-  template <typename T>
-  void push_back(const T& t) requires one_of<T, T1, T2, T3>
+  template <one_of<T1, T2, T3> T>
+  void push_back(const T& t)
   {
     contents.push_back(t);
   }
 
   // Get a view of all of the elements of type T stored in the list.
-  template <typename T>
-  auto range_over() const requires one_of<T, T1, T2, T3>
+  template <one_of<T1, T2, T3> T>
+  auto range_over() const
   {
     return contents
       | std::views::filter(std::holds_alternative<T, T1, T2, T3>)
@@ -100,8 +100,8 @@ public:
 
   // Modify all elements of type T with a modifier m. It updates the appropriate
   // modifier from the mods tuple by composing its previous value with m.
-  template <typename T, modifier<T> F>
-  void modify_only(F m = F{}) requires one_of<T, T1, T2, T3>
+  template <one_of<T1, T2, T3> T, modifier<T> F>
+  void modify_only(F m = F{})
   {
     auto& mod = get_mod<T>();
     mod = compose<T>(m, mod);
@@ -109,8 +109,8 @@ public:
 
   // Undo all modifications that were done on elements of type T. Do it by
   // overwriting the modifier for type T with identity<T>.
-  template <typename T>
-  void reset() requires one_of<T, T1, T2, T3>
+  template <one_of<T1, T2, T3> T>
+  void reset()
   {
     get_mod<T>() = identity<T>;
   }
