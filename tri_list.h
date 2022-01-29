@@ -45,12 +45,12 @@ class tri_list {
   using var_t = std::variant<T1, T2, T3>;
 
   // Alias for the basic modifier type for elements of type T. Useful for
-  // accessing the tuple in which I keep the three modifiers.
+  // accessing the tuple in which the three modifiers are kept.
   template <typename T>
   using mod_type = std::function<T(const T&)>;
 
-  // Modifier for each type is kept here. Note that I use the previously defined
-  // mod_type<T> alias as I will continue to use it with std::get on this tuple.
+  // Modifier for each type is kept here. Note the use of the previously defined
+  // mod_type<T> alias as it will be used with std::get on this tuple.
   std::tuple<mod_type<T1>, mod_type<T2>, mod_type<T3>> mods = {
     identity<T1>, identity<T2>, identity<T3>
   };
@@ -70,14 +70,14 @@ class tri_list {
     return std::get<mod_type<T>>(mods);
   }
 
-  // Contents will be stored in a vector of variants.
+  // Contents of the list will be stored in a vector of variants.
   std::vector<var_t> contents;
 
 public:
   // Constructor for an empty list.
   tri_list() : contents{} {}
 
-  // Make a tri_list out of initialiser list of elements of types T1, T2 and T3.
+  // Make a tri_list out of elements of types T1, T2 and T3.
   tri_list(std::initializer_list<var_t> init) : contents{init} {}
 
   // Add a new element of type T to the list.
@@ -117,15 +117,14 @@ public:
 
 private:
   // An iterator, necessary for the begin() and end() methods. Based on the
-  // contents vector's const iterator but applies modifiers when
-  // dereferenced. Only methods necessary for the input_iterator concept have
-  // been implemented.
+  // contents' vector iterator but applies modifiers when dereferenced. Only
+  // methods necessary for the input_iterator concept have been implemented.
   class tri_iterator : public std::vector<var_t>::const_iterator {
+    using base_it_t = typename std::vector<var_t>::const_iterator;
+
     // Keeping the tri_list this iterator refers to in order to use the freshest
     // versions of its modifiers.
     const tri_list* tl;
-
-    using base_it_t = typename std::vector<var_t>::const_iterator;
 
   public:
     using value_type = var_t;
@@ -161,7 +160,7 @@ private:
   };
 
 public:
-  // Get the iterators.
+  // Get appropriate iterators.
   tri_iterator begin() const
   {
     return tri_iterator{contents.cbegin(), this};
