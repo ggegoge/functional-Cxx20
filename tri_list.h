@@ -103,7 +103,7 @@ class tri_list {
   using var_view_t = decltype(contents | std::views::transform(var_modifier));
 
   // Keep a view with modifed list's contents.
-  const var_view_t modified = contents | std::views::transform(var_modifier);
+  const var_view_t modified{contents | std::views::transform(var_modifier)};
 
 public:
   // Constructor for an empty list.
