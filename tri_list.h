@@ -59,7 +59,8 @@ class tri_list {
   // this tuple which greatly facilitates accessing these lists of modifiers.
   // It's mutable so that each modifier gets composed only once.
   mutable std::tuple<modlist_t<T1>, modlist_t<T2>, modlist_t<T3>> mods = {
-    {}, {}, {}};
+    {}, {}, {}
+  };
 
   // Accessing the type T's current list of modifiers. It returns a reference so
   // that it can be further modified. It may be const as the tuple is mutable.
@@ -92,7 +93,7 @@ class tri_list {
 
   // This function unpacks a variant, applies the modifiers on it and then
   // packs it into a variant once again.
-  id_fn_t<var_t> var_modifier = [this] (const var_t& v) -> var_t {
+  const id_fn_t<var_t> var_modifier = [this] (const var_t& v) -> var_t {
     return std::visit([this] <typename T> (const T& t) -> var_t {
         return compose_mods<T>()(t);
       }, v);
@@ -104,7 +105,7 @@ class tri_list {
   using var_view_t = decltype(contents | std::views::transform(var_modifier));
 
   // Keep a view with modifed list's contents.
-  var_view_t modified = contents | std::views::transform(var_modifier);
+  const var_view_t modified = contents | std::views::transform(var_modifier);
 
 public:
   // Constructor for an empty list.
