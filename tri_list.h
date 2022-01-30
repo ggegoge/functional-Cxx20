@@ -45,10 +45,14 @@ class tri_list {
   // A shorthand for the variants stored by the list.
   using var_t = std::variant<T1, T2, T3>;
 
+  // Type of an identity function T -> T.
+  template <typename T>
+  using id_fn_t = std::function<T(const T&)>;
+
   // Alias for the lost of modifiers for elements of type T. Useful for
   // accessing the tuple in which the three lists are kept.
   template <typename T>
-  using modlist_t = std::vector<std::function<T(const T&)>>;
+  using modlist_t = std::vector<id_fn_t<T>>;
 
   // List of modifiers for each type is kept here. Note the use of the
   // previously defined modlist_t<T> type as it will be used with std::get on
@@ -70,11 +74,11 @@ class tri_list {
   // of modifiers with a one element list with the composed result compressing
   // the list (each modifier will be composed only once).
   template <typename T>
-  std::function<T(const T&)> compose_mods() const
+  id_fn_t<T> compose_mods() const
   {
     get_mods<T>() = {
       std::accumulate(get_mods<T>().cbegin(), get_mods<T>().cend(),
-        static_cast<std::function<T(const T&)>>(identity<T>),
+        static_cast<id_fn_t<T>>(identity<T>),
         [] (auto&& f1, auto&& f2) { return compose<T>(f2, f1); })
     };
 
@@ -84,9 +88,23 @@ class tri_list {
   // Contents of the list will be stored in a vector of variants.
   std::vector<var_t> contents;
 
+  // This function unpacks a variant, applies the modifiers on it and then
+  // packs it into a variant once again.
+  id_fn_t<var_t> var_modifier = [this] (const var_t& v) -> var_t {
+    return std::visit([this] <typename T> (const T& t) -> var_t {
+        return compose_mods<T>()(t);
+      }, v);
+  };
+
+  // Type for a view over variants holding modified values from the list.
+  using var_view_t = decltype(contents | std::views::transform(var_modifier));
+
+  // Keep a view with modifed list's contents.
+  var_view_t modified = contents | std::views::transform(var_modifier);
+
 public:
   // Constructor for an empty list.
-  tri_list() : contents{} {}
+  tri_list() {}
 
   // Make a tri_list out of elements of types T1, T2 and T3.
   tri_list(std::initializer_list<var_t> init) : contents{init} {}
@@ -103,11 +121,9 @@ public:
   template <variantable<T1, T2, T3> T>
   auto range_over() const
   {
-    return contents
+    return modified
       | std::views::filter(std::holds_alternative<T, T1, T2, T3>)
-      | std::views::transform([this] (const var_t& v) -> T {
-        return compose_mods<T>()(std::get<T>(v));
-      });
+      | std::views::transform([] (const var_t& v) { return std::get<T>(v); });
   }
 
   // Lazily modify all elements of type T with a modifier m. It appends m to the
@@ -126,59 +142,15 @@ public:
     get_mods<T>() = {};
   }
 
-private:
-  // An iterator, necessary for the begin() and end() methods. Based on the
-  // contents' vector iterator but applies modifiers when dereferenced. Only
-  // methods necessary for the input_iterator concept have been implemented.
-  class tri_iterator : public std::vector<var_t>::const_iterator {
-    using base_it_t = typename std::vector<var_t>::const_iterator;
-
-    // Keeping the tri_list this iterator refers to in order to use the freshest
-    // versions of its modifiers.
-    const tri_list* tl;
-
-  public:
-    using value_type = var_t;
-
-    tri_iterator(base_it_t it, const tri_list* tl)
-      : base_it_t{it}, tl{tl} {}
-
-    // Must be default-initialisable.
-    tri_iterator() : base_it_t{}, tl{nullptr} {}
-
-    // As in the base class iterator but apply a modifier upon visit.
-    var_t operator*() const
-    {
-      const var_t& elt = base_it_t::operator*();
-      return std::visit([this] <typename T> (const T& t) -> var_t {
-        return tl->compose_mods<T>()(t);
-      }, elt);
-    }
-
-    tri_iterator& operator++()
-    {
-      base_it_t::operator++();
-      return *this;
-    }
-
-    tri_iterator operator++(int)
-    {
-      tri_iterator tmp{*this};
-      base_it_t::operator++();
-      return tmp;
-    }
-  };
-
-public:
-  // Get appropriate iterators.
-  tri_iterator begin() const
+  // Get begin and end of the modified list's view.
+  auto begin() const
   {
-    return tri_iterator{contents.cbegin(), this};
+    return std::ranges::begin(modified);
   }
 
-  tri_iterator end() const
+  auto end() const
   {
-    return tri_iterator{contents.cend(), this};
+    return std::ranges::end(modified);
   }
 };
 
