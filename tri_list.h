@@ -58,9 +58,7 @@ class tri_list {
   // previously defined modlist_t<T> type as it will be used with std::get on
   // this tuple which greatly facilitates accessing these lists of modifiers.
   // It's mutable so that each modifier gets composed only once.
-  mutable std::tuple<modlist_t<T1>, modlist_t<T2>, modlist_t<T3>> mods = {
-    {}, {}, {}
-  };
+  mutable std::tuple<modlist_t<T1>, modlist_t<T2>, modlist_t<T3>> mods{{}, {}, {}};
 
   // Accessing the type T's current list of modifiers. It returns a reference so
   // that it can be further modified. It may be const as the tuple is mutable.
