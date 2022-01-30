@@ -29,7 +29,7 @@ template <typename T, modifier<T> F1, modifier<T> F2>
 inline auto compose(F2&& f2, F1&& f1)
 {
   using namespace std::placeholders;
-  return std::bind(std::move(f2), std::bind(std::move(f1), _1));
+  return std::bind(std::forward<F2>(f2), std::bind(std::forward<F1>(f1), _1));
 }
 
 // Identity function for any type.
@@ -75,7 +75,9 @@ class tri_list {
     get_mods<T>() = {
       std::accumulate(get_mods<T>().cbegin(), get_mods<T>().cend(),
         static_cast<std::function<T(const T&)>>(identity<T>),
-        [] (auto&& f1, auto&& f2) { return compose<T>(f2, f1); })
+        [] (auto&& f1, auto&& f2) {
+          return compose<T>(std::move(f2), std::move(f1));
+        })
     };
 
     return get_mods<T>().front();
