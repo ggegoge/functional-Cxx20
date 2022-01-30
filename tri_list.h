@@ -53,31 +53,32 @@ class tri_list {
   // List of modifiers for each type is kept here. Note the use of the
   // previously defined modlist_t<T> type as it will be used with std::get on
   // this tuple which greatly facilitates accessing these lists of modifiers.
-  std::tuple<modlist_t<T1>, modlist_t<T2>, modlist_t<T3>> mods = {{}, {}, {}};
+  // It's mutable so that each modifier gets composed only once.
+  mutable std::tuple<modlist_t<T1>, modlist_t<T2>, modlist_t<T3>> mods = {
+    {}, {}, {}};
 
   // Accessing the type T's current list of modifiers. It returns a reference so
-  // that it can be further modified. That's also why it cannot be const.
+  // that it can be further modified. It may be const as the tuple is mutable.
   template <typename T>
-  modlist_t<T>& get_mods()
-  {
-    return std::get<modlist_t<T>>(mods);
-  }
-
-  // Same function but for const access (so that eg. range_over can be const).
-  template <typename T>
-  const modlist_t<T>& get_mods() const
+  modlist_t<T>& get_mods() const
   {
     return std::get<modlist_t<T>>(mods);
   }
 
   // Get a modifier for type T representing the composition of all modifiers
-  // applied on tri list's elements of this type.
+  // applied on tri list's elements of this type. It then replaces the T's list
+  // of modifiers with a one element list with the composed result compressing
+  // the list (each modifier will be composed only once).
   template <typename T>
   std::function<T(const T&)> compose_mods() const
   {
-    return std::accumulate(get_mods<T>().cbegin(), get_mods<T>().cend(),
-      static_cast<std::function<T(const T&)>>(identity<T>),
-      [] (auto&& f1, auto&& f2) { return compose<T>(f2, f1); });
+    get_mods<T>() = {
+      std::accumulate(get_mods<T>().cbegin(), get_mods<T>().cend(),
+        static_cast<std::function<T(const T&)>>(identity<T>),
+        [] (auto&& f1, auto&& f2) { return compose<T>(f2, f1); })
+    };
+
+    return get_mods<T>().front();
   }
 
   // Contents of the list will be stored in a vector of variants.
@@ -111,7 +112,7 @@ public:
 
   // Lazily modify all elements of type T with a modifier m. It appends m to the
   // T's modifiers list. The modifiers will get actually composed and applied
-  // upon each visitation of an element of this type.
+  // upon a visitation of an element of this type.
   template <variantable<T1, T2, T3> T, modifier<T> F>
   void modify_only(F m = F{})
   {
