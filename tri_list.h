@@ -97,6 +97,8 @@ class tri_list {
   };
 
   // Type for a view over variants holding modified values from the list.
+  // It is troubling it is done with decltype but I do not know the proper
+  // type of such a view (how to write it manually).
   using var_view_t = decltype(contents | std::views::transform(var_modifier));
 
   // Keep a view with modifed list's contents.
